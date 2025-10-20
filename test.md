@@ -1,4 +1,135 @@
-
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تحلیل عمیق فرآیندهای حیاتی ویندوز - راهنمای شکار تهدیدات</title>
+    <style>
+        body {
+            font-family: 'Tahoma', 'Arial', sans-serif;
+            line-height: 1.8;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #1a5490;
+            border-bottom: 3px solid #1a5490;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #2c3e50;
+            margin-top: 30px;
+            border-right: 5px solid #3498db;
+            padding-right: 15px;
+        }
+        h3 {
+            color: #34495e;
+            margin-top: 25px;
+        }
+        .warning-box {
+            background-color: #fff3cd;
+            border-right: 4px solid #ffc107;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .info-box {
+            background-color: #d1ecf1;
+            border-right: 4px solid #17a2b8;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .danger-box {
+            background-color: #f8d7da;
+            border-right: 4px solid #dc3545;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 14px;
+        }
+        th {
+            background-color: #1a5490;
+            color: white;
+            padding: 12px;
+            text-align: right;
+        }
+        td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: right;
+        }
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        code {
+            background-color: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            color: #c7254e;
+        }
+        .process-tree {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 20px;
+            margin: 20px 0;
+            font-family: monospace;
+            direction: ltr;
+            text-align: left;
+            white-space: pre;
+            overflow-x: auto;
+        }
+        ul.indicators {
+            list-style: none;
+            padding-right: 0;
+        }
+        ul.indicators li:before {
+            content: "⚠️ ";
+            margin-left: 10px;
+        }
+        .mitre-tag {
+            display: inline-block;
+            background-color: #e74c3c;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            margin: 0 5px;
+        }
+        .technique-box {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-right: 4px solid #6c757d;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .tool-box {
+            background-color: #e2e3e5;
+            border-right: 4px solid #6c757d;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            color: #6c757d;
+            font-size: 14px;
+        }
+    </style>
+</head>
 <body>
 
 <div class="container" dir="rtl" align="right">
@@ -129,8 +260,7 @@
 
 <h2>🌳 نمودار درختی فرآیندهای راه‌اندازی ویندوز</h2>
 
-<div class="process-tree">
-System (PID: 4)
+<div class="process-tree">System (PID: 4)
 │
 ├── Memory Compression (Win10+)
 │
@@ -163,8 +293,7 @@ System (PID: 4)
                     ├── [User Applications]
                     ├── cmd.exe (if user launches)
                     ├── powershell.exe (if user launches)
-                    └── ...
-</div>
+                    └── ...</div>
 
 <h2>🔍 بخش اول: تحلیل عمیق فرآیندهای حیاتی ویندوز</h2>
 
