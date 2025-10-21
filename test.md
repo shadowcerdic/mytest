@@ -1,262 +1,260 @@
+البته، این هم نسخه کامل و یکپارچه شده که هر سه فرآیند System، smss.exe و Memory Compression را پوشش می‌دهد. این متن با فرمت Markdown برای استفاده در پلتفرم‌هایی مانند GitHub کاملاً بهینه‌سازی شده است و ساختار راست‌چین و چپ‌چین در آن رعایت شده است.
 
 <div dir="rtl">
 
-# تحلیل جامع فرآیندهای System و Memory Compression در ویندوز
+تحلیل جامع فرآیندهای سیستمی ویندوز: System, smss.exe و Memory Compression
+مقدمه
 
-## مقدمه
+در معماری سیستم‌عامل ویندوز، فرآیندهای خاصی وجود دارند که درک آن‌ها برای مدیریت، بهینه‌سازی و امنیت سیستم حیاتی است. سه مورد از مهم‌ترین و در عین حال گاهی مبهم‌ترینِ این فرآیندها، «System»، «Session Manager Subsystem» یا smss.exe و «Memory Compression» هستند. این راهنما به تحلیل عمیق این سه فرآیند، رفتارهای عادی و مشکوک آن‌ها و روش‌های عملی برای بررسی آن‌ها می‌پردازد.
 
-در معماری سیستم‌عامل ویندوز، فرآیندهای خاصی وجود دارند که درک آن‌ها برای مدیریت، بهینه‌سازی و امنیت سیستم حیاتی است. دو مورد از مهم‌ترین و در عین حال گاهی مبهم‌ترینِ این فرآیندها، «System» و «Memory Compression» هستند. این راهنما به تحلیل عمیق این دو فرآیند، رفتارهای عادی و مشکوک آن‌ها و روش‌های عملی برای بررسی آن‌ها می‌پردازد.
+۱. فرآیند System (PID 4): قلب تپنده کرنل
 
----
+فرآیند System با شناسه فرآیند (PID) ثابت 4، یکی از اصلی‌ترین و بنیادی‌ترین موجودیت‌ها در هسته (Kernel) ویندوز است. این فرآیند، یک فرآیند واقعی در فضای کاربر (User Space) نیست؛ بلکه در ابزارهایی مانند Task Manager، بازتابی از تمام فعالیت‌ها و تِرِدهای در حال اجرا در حالت هسته (Kernel Mode Threads) است.
 
-## ۱. فرآیند System (PID 4): قلب تپنده کرنل
+این فرآیند در واقع نمایانگر عملکرد خودِ هسته ویندوز (فایل ntoskrnl.exe) بوده و مسئولیت اجرای روتین‌های وقفه (Interrupt Routines) و روندهای زمان‌بندی (Scheduling) را بر عهده دارد.
 
-فرآیند **System** با شناسه فرآیند (PID) ثابت **4**، یکی از اصلی‌ترین و بنیادی‌ترین موجودیت‌ها در هسته (Kernel) ویندوز است. این فرآیند، یک فرآیند واقعی در فضای کاربر (User Space) مانند سایر برنامه‌ها نیست؛ بلکه در ابزارهایی مانند Task Manager، بازتابی از تمام فعالیت‌ها و تِرِدهای در حال اجرا در حالت هسته (Kernel Mode Threads) است.
+ویژگی‌های کلیدی
 
-این فرآیند در واقع نمایانگر عملکرد خودِ هسته ویندوز (فایل `ntoskrnl.exe`) بوده و مسئولیت اجرای روتین‌های وقفه (Interrupt Routines) و روندهای زمان‌بندی (Scheduling) را بر عهده دارد.
+PID: همیشه و به صورت ثابت 4 است.
 
-<h3 dir="rtl">ویژگی‌های کلیدی</h3>
+مالک (Owner): تحت حساب کاربری NT AUTHORITY\SYSTEM اجرا می‌شود.
 
-<ul dir="rtl">
-  <li><b>PID:</b> همیشه و به صورت ثابت <code>4</code> است.</li>
-  <li><b>مالک (Owner):</b> تحت حساب کاربری <code>NT AUTHORITY\SYSTEM</code> اجرا می‌شود.</li>
-  <li><b>والد (Parent):</b> هیچ (این فرآیند ریشه است و توسط هسته در زمان بوت ایجاد می‌شود).</li>
-  <li><b>فرزند (Child):</b> در یک سیستم سالم، فرآیند System تنها و فقط یک فرآیند فرزند به نام <code>smss.exe</code> (Session Manager Subsystem) دارد.</li>
-  <li><b>مسیر اجرایی:</b> فاقد مسیر اجرایی در فضای کاربر است. در Process Explorer به عنوان "None" نمایش داده می‌شود.</li>
-</ul>
+والد (Parent): هیچ (این فرآیند ریشه است و توسط هسته در زمان بوت ایجاد می‌شود).
 
-### وظایف اصلی
+فرزند (Child): در یک سیستم سالم، فرآیند System تنها و فقط یک فرآیند فرزند به نام smss.exe دارد.
 
-فرآیند System میزبان تمامی تردهای کرنلی است که وظایف حیاتی سیستم را مدیریت می‌کنند، از جمله:
+مسیر اجرایی: فاقد مسیر اجرایی در فضای کاربر است. در Process Explorer به عنوان "None" نمایش داده می‌شود.
 
-- **مدیریت حافظه (Memory Manager Threads):** برای تخصیص حافظه در Kernel Pool.
-- **عملیات ورودی/خروجی (I/O Workers):** برای کنترل دیسک و شبکه.
-- **توزیع بار پردازشی (Balancer Threads):** برای متعادل‌سازی بار کاری بین هسته‌های CPU.
-- **ارتباطات بین پردازشی (IPC):** مدیریت System Calls، DPCs و Interrupts.
+وظایف اصلی
 
----
+مدیریت حافظه (Memory Manager Threads): برای تخصیص حافظه در Kernel Pool.
 
-## ۲. فرآیند Memory Compression: بهینه‌ساز حافظه مدرن
+عملیات ورودی/خروجی (I/O Workers): برای کنترل دیسک و شبکه.
 
-فرآیند **Memory Compression** یکی از قابلیت‌های نسبتاً جدید است که از ویندوز ۱۰ (Build 10586) به بعد معرفی شد. این فرآیند یک موجودیت سیستمی است که با هدف بهبود عملکرد و زمان پاسخ‌دهی سیستم، به‌خصوص در زمان کمبود حافظه فیزیکی (RAM)، طراحی شده است.
+توزیع بار پردازشی (Balancer Threads): برای متعادل‌سازی بار کاری بین هسته‌های CPU.
 
-### عملکرد و هدف
+ارتباطات بین پردازشی (IPC): مدیریت System Calls، DPCs و Interrupts.
 
-در گذشته، زمانی که RAM سیستم پر می‌شد، ویندوز داده‌های غیرفعال را به فایل صفحه‌بندی (`Pagefile.sys`) روی دیسک سخت منتقل می‌کرد. این فرآیند (Paging) به دلیل کُند بودن دیسک نسبت به حافظه، باعث افت شدید عملکرد می‌شد.
+۲. فرآیند smss.exe: دروازه‌بان نشست‌های کاربری
 
-فرآیند Memory Compression این چرخه را بهینه‌سازی می‌کند. به جای انتقال مستقیم داده‌ها به دیسک، ابتدا سعی می‌کند بخش‌هایی از حافظه فرآیندهای غیرفعال را درون خودِ RAM فشرده‌سازی کند. این کار فضای خالی در RAM ایجاد می‌کند و نیاز به مراجعه به دیسک را به شدت کاهش می‌دهد.
+فرآیند Session Manager Subsystem (با نام فایل smss.exe) یکی از حیاتی‌ترین مؤلفه‌های سیستم‌عامل ویندوز و در واقع اولین فرآیند حالت کاربر (User Mode) است که پس از راه‌اندازی هسته توسط فرآیند System (PID 4) ایجاد می‌شود.
 
+مسیر اجرایی این فرآیند همواره در C:\Windows\System32\smss.exe قرار دارد و تحت حساب کاربری NT AUTHORITY\SYSTEM اجرا می‌شود.
 
-### ویژگی‌های کلیدی
+<p align="center">
+<img src="https://i.imgur.com/G5g2LdN.png" alt="Process Hierarchy" width="500"/>
+</p>
 
-- **والد (Parent):** این فرآیند فرزند فرآیند `System` (PID 4) محسوب می‌شود.
-- **فرزند (Child):** هیچ فرآیند فرزندی ندارد.
-- **مالک (Owner):** تحت حساب کاربری `NT AUTHORITY\SYSTEM` اجرا می‌شود.
-- **تعداد:** همیشه تنها یک نمونه از آن در سیستم فعال است.
-- **عملکرد داخلی:** این فرآیند بخشی از مدیریت حافظه (Memory Manager) در کرنل است و از ساختاری به نام **Store Manager** برای نگهداری صفحات فشرده (`SMKM_STORE`) استفاده می‌کند.
+وظایف اصلی و حیاتی
 
----
+ایجاد متغیرهای محیطی (Environment Variables): متغیرهای سیستمی را از رجیستری می‌خواند و تنظیم می‌کند.
 
-<h2 dir="rtl">۳. بخش‌های کاربردی و عملیاتی</h2>
+مقداردهی اولیه رجیستری: هایوهای (Hives) حیاتی مانند HKLM\SAM، HKLM\SECURITY و HKLM\SOFTWARE را مقداردهی اولیه می‌کند.
 
-<h3 dir="rtl">راهنمای عملی تحلیل</h3>
+مدیریت فایل صفحه‌بندی (Page File): فایل Pagefile.sys را برای مدیریت حافظه مجازی ایجاد می‌کند.
 
-<p dir="rtl">در این بخش، دستورات و ابزارهای کلیدی برای تحلیل این دو فرآیند معرفی می‌شوند.</p>
+بارگذاری زیرسیستم Win32: زیرسیستم Win32k.sys (در حالت هسته) و csrss.exe (در حالت کاربر) را راه‌اندازی می‌کند.
 
-<h4 dir="rtl">ابزارهای مجموعه Sysinternals Suite</h4>
+ایجاد نشست‌ها (Sessions): مهم‌ترین وظیفه آن، ایجاد نشست‌های کاربری جدید است.
 
-<p dir="rtl">مجموعه ابزار Sysinternals که توسط مایکروسافت پشتیبانی می‌شود، برای عیب‌یابی و مدیریت پیشرفته ویندوز ضروری است.</p>
+ساختار نمونه‌ها: معماری Master و Child
 
-<ul dir="rtl">
-  <li><b>Process Explorer:</b> جایگزینی قدرتمند برای Task Manager است. با استفاده از این ابزار می‌توان به راحتی ساختار سلسله‌مراتبی فرآیند System و فرزندان آن را مشاهده کرد.</li>
-  <li><b>Process Monitor:</b> این ابزار فعالیت‌های فایل سیستم، رجیستری و شبکه را به صورت زنده نمایش می‌دهد و برای شناسایی دسترسی‌های غیرمجاز توسط این فرآیندها بسیار کارآمد است.</li>
-  <li><b>Sysmon:</b> ابزاری پیشرفته برای نظارت و ثبت رویدادهای سیستمی در Event Log است. با پیکربندی صحیح، Sysmon می‌تواند فعالیت‌های مشکوک مانند ایجاد فرآیندهای غیرعادی توسط System را ثبت کند.</li>
-</ul>
+نحوه عملکرد smss.exe اغلب باعث سردرگمی می‌شود، اما ساختار مشخصی دارد:
 
-#### دستورات PowerShell :PowerShell یک ابزار خط فرمان و زبان اسکریپت‌نویسی قدرتمند برای مدیریت و خودکارسازی وظایف در ویندوز است. در زمینه تحلیل فرآیندهای سیستمی، می‌توان از دستورات زیر استفاده کرد:- **نمایش اطلاعات فرآیند:**
+نمونه اصلی (Master Instance): یک نمونه اصلی و دائمی از smss.exe وجود دارد که پس از بوت در حافظه باقی می‌ماند. مشخصه اصلی این نمونه، عدم وجود هرگونه آرگومان خط فرمان (Command Line Arguments) است.
+
+نمونه‌های فرزند (Temporary Instances): این نمونه اصلی، به ازای هر نشست جدید، یک کپی موقتی (فرزند) از خود ایجاد می‌کند.
+
+Session 0 (نشست سیستمی): اولین فرزند برای نشست صفر ایجاد شده و مسئول راه‌اندازی فرآیندهای csrss.exe و wininit.exe است.
+
+Session 1 (نشست کاربر): فرزند بعدی برای نشست اولین کاربر ایجاد شده و مسئول راه‌اندازی csrss.exe و winlogon.exe مربوط به آن نشست است.
+
+خاتمه فرزندان: پس از اینکه این نمونه‌های موقت وظایف خود را انجام دادند، خاتمه می‌یابند. بنابراین، در یک سیستم در حال کار، تنها یک نمونه اصلی و پایدار از smss.exe باید فعال باشد.
+
+۳. فرآیند Memory Compression: بهینه‌ساز حافظه مدرن
+
+فرآیند Memory Compression یکی از قابلیت‌های نسبتاً جدید است که از ویندوز ۱۰ (Build 10586) به بعد معرفی شد. این فرآیند با هدف بهبود عملکرد سیستم، به‌خصوص در زمان کمبود حافظه فیزیکی (RAM)، طراحی شده است.
+
+عملکرد و هدف
+
+به جای انتقال مستقیم داده‌های غیرفعال از RAM به دیسک (Paging)، این فرآیند ابتدا سعی می‌کند بخش‌هایی از حافظه را درون خودِ RAM فشرده‌سازی کند. این کار فضای خالی ایجاد کرده و نیاز به مراجعه به دیسکِ کُند را کاهش می‌دهد.
+
+<p align="center">
+<img src="https://i.imgur.com/vHq4R7F.png" alt="Memory Compression Flow Diagram" width="600"/>
+</p>
+
+ویژگی‌های کلیدی
+
+والد (Parent): این فرآیند فرزند فرآیند System (PID 4) محسوب می‌شود.
+
+فرزند (Child): هیچ فرآیند فرزندی ندارد.
+
+مالک (Owner): تحت حساب کاربری NT AUTHORITY\SYSTEM اجرا می‌شود.
+
+تعداد: همیشه تنها یک نمونه از آن در سیستم فعال است.
+
+عملکرد داخلی: بخشی از مدیریت حافظه (Memory Manager) در کرنل است و از ساختاری به نام Store Manager برای نگهداری صفحات فشرده استفاده می‌کند.
+
+۴. بخش‌های کاربردی و عملیاتی
+راهنمای عملی تحلیل
+ابزارهای مجموعه Sysinternals Suite
+
+Process Explorer: برای مشاهده دقیق سلسله‌مراتب فرآیندها (System -> smss.exe & Memory Compression).
+
+Process Monitor: برای رصد زنده فعالیت‌های فایل سیستم و رجیستری.
+
+Sysmon: برای ثبت رویدادهای سیستمی و شناسایی ناهنجاری‌ها بر اساس قوانین از پیش تعیین‌شده.
+
+دستورات PowerShell
+
+نمایش اطلاعات فرآیندها:
 
 <div dir="ltr">
 
-```powershell
+code
+Powershell
+download
+content_copy
+expand_less
 # Get information about the System process
 Get-Process -Id 4 | Format-List *
 
+# Get information about the smss.exe process (should be only one)
+Get-Process -Name "smss"
+
 # Get information about the Memory Compression process
 Get-Process -Name "Memory Compression"
-```
-
 </div>
 
-- **بررسی و مدیریت وضعیت Memory Compression:**
+
+بررسی و مدیریت وضعیت Memory Compression:
 
 <div dir="ltr">
 
-```powershell
+code
+Powershell
+download
+content_copy
+expand_less
 # Check if Memory Compression is enabled
 Get-MMAgent
 
 # Disable Memory Compression (requires Admin rights)
 Disable-MMAgent -mc
-
-# Enable Memory Compression (requires Admin rights)
-Enable-MMAgent -mc
-```
-
 </div>
 
-#### ابزار Volatility برای تحلیل حافظه: (Memory Forensics) Volatility یک فریم‌ورک متن‌باز برای تحلیل حافظه‌ی dump است و می‌تواند شواهد فعالیت‌های مخرب را از حافظه استخراج کند. این ابزار قابلیت‌های زیر را فراهم می‌کند:
-1.  **تهیه Dump حافظه:** از یک سیستم مشکوک، یک Image کامل از حافظه RAM تهیه کنید.
-2.  **لیست فرآیندها:** با پلاگین `windows.pslist.PsList` لیست فرآیندها را بررسی کنید و به دنبال ناهنجاری در فرآیند System باشید.
-3.  **کدهای تزریق‌شده:** از پلاگین `windows.malfind.Malfind` برای یافتن کدهای تزریق‌شده به فرآیندهای سیستمی استفاده کنید.
-4.  **بررسی ماژول‌های کرنل:** با پلاگین `windows.modules.Modules` لیست درایورهای بارگذاری‌شده را تحلیل کرده و به دنبال موارد مخفی یا مشکوک بگردید.
+ابزار Volatility برای تحلیل حافظه
 
-<h3 dir="rtl">جدول مقایسه‌ای: رفتار عادی در مقابل مشکوک</h3>
+با استفاده از Volatility و یک dump از حافظه RAM، می‌توان فرآیندهای مخفی (که توسط Rootkit از دید ابزارهای زنده پنهان شده‌اند) یا کدهای تزریق‌شده به فرآیندهای سیستمی را شناسایی کرد.
 
-<table dir="rtl">
-  <tr>
-    <th>ویژگی</th>
-    <th>رفتار عادی (Normal)</th>
-    <th>رفتار مشکوک (Suspicious / IoC)</th>
-  </tr>
-  <tr>
-    <td><b>فرآیند System (PID 4)</b></td>
-    <td></td>
-    <td></td>
-  </tr>
-  <tr>
-    <td>تعداد نمونه‌ها</td>
-    <td>دقیقاً یک نمونه با PID <code>4</code>.</td>
-    <td>بیش از یک نمونه.</td>
-  </tr>
-  <tr>
-    <td>فرآیند والد</td>
-    <td>ندارد (ریشه است).</td>
-    <td>داشتن یک فرآیند والد دیگر.</td>
-  </tr>
-  <tr>
-    <td>فرآیند فرزند</td>
-    <td>فقط <code>smss.exe</code>.</td>
-    <td>هر فرزندی غیر از <code>smss.exe</code> یا داشتن چندین فرزند.</td>
-  </tr>
-  <tr>
-    <td>فعالیت شبکه</td>
-    <td>محدود به درایورهای کرنل (مثل <code>HTTP.sys</code>). معمولاً پورت باز ندارد.</td>
-    <td>شنود روی پورت‌های شناخته‌شده (80, 443, 445) یا ایجاد اتصالات خروجی.</td>
-  </tr>
-  <tr>
-    <td>مصرف CPU</td>
-    <td>در حالت بیکار نزدیک به صفر.</td>
-    <td>مصرف پایدار و بالای CPU حتی در زمان بیکاری سیستم.</td>
-  </tr>
-  <tr>
-    <td><b>فرآیند Memory Compression</b></td>
-    <td></td>
-    <td></td>
-  </tr>
-  <tr>
-    <td>تعداد نمونه‌ها</td>
-    <td>دقیقاً یک نمونه.</td>
-    <td>بیش از یک نمونه.</td>
-  </tr>
-  <tr>
-    <td>فرآیند والد</td>
-    <td>فرآیند <code>System</code> (PID 4).</td>
-    <td>هر والدی غیر از فرآیند System.</td>
-  </tr>
-  <tr>
-    <td>فرآیند فرزند</td>
-    <td>ندارد.</td>
-    <td>داشتن هرگونه فرآیند فرزند.</td>
-  </tr>
-  <tr>
-    <td>فعالیت شبکه/دیسک</td>
-    <td>نباید هیچ فعالیت مستقیم شبکه‌ای یا I/O دیسک داشته باشد.</td>
-    <td>مشاهده اتصالات شبکه، خواندن/نوشتن فایل روی دیسک.</td>
-  </tr>
-  <tr>
-    <td>حجم حافظه</td>
-    <td>متناسب با فشار روی RAM افزایش می‌یابد.</td>
-    <td>افزایش شدید و ناگهانی حجم حافظه فشرده بدون دلیل مشخص.</td>
-  </tr>
-</table>
+جدول مقایسه‌ای: رفتار عادی در مقابل مشکوک
+فرآیند / ویژگی	رفتار عادی (Normal)	رفتار مشکوک (Suspicious / IoC)
+System (PID 4)		
+تعداد و PID	دقیقاً یک نمونه با PID 4.	بیش از یک نمونه یا PID متفاوت.
+والد	ندارد (ریشه).	داشتن یک فرآیند والد.
+فرزند	فقط smss.exe.	هر فرزندی غیر از smss.exe.
+فعالیت شبکه	محدود به درایورهای کرنل (مثل HTTP.sys).	شنود روی پورت‌های رایج (80, 443) یا ایجاد اتصالات خروجی.
+smss.exe		
+مسیر اجرایی	همیشه در C:\Windows\System32.	وجود فایل در مسیر دیگر یا با نام مشابه (smsss.exe).
+والد	همیشه System (PID 4).	هر والد دیگری (explorer.exe, services.exe, ...).
+تعداد نمونه‌ها	یک نمونه پایدار (بدون آرگومان خط فرمان).	بیش از یک نمونه پایدار.
+فعالیت شبکه	ندارد.	هرگونه فعالیت شبکه‌ای یک پرچم قرمز جدی است.
+Memory Compression		
+والد	System (PID 4).	هر والدی غیر از فرآیند System.
+فرزند	ندارد.	داشتن هرگونه فرآیند فرزند.
+فعالیت شبکه/دیسک	ندارد.	مشاهده اتصالات شبکه یا خواندن/نوشتن مستقیم روی دیسک.
+چک‌لیست امنیتی برای تحلیلگران
 
-### چک‌لیست امنیتی برای تحلیلگران
+PID 4: آیا فقط یک فرآیند System با PID 4 وجود دارد و والد آن خالی است؟
 
-1.  [ ] **بررسی تعداد و PID:** آیا فقط یک فرآیند `System` با `PID 4` وجود دارد؟
-2.  [ ] **بررسی ساختار والد-فرزند:** آیا والد فرآیند `System` خالی است و تنها فرزند آن `smss.exe` است؟
-3.  [ ] **بررسی والد Memory Compression:** آیا والد فرآیند `Memory Compression`، فرآیند `System` است؟
-4.  [ ] **نظارت بر اتصالات شبکه:** با استفاده از `netstat -ano` یا TCPView، بررسی کنید که آیا `PID 4` یا `Memory Compression` فعالیت شبکه‌ای غیرمنتظره‌ای دارند.
-5.  [ ] **تحلیل مصرف منابع:** آیا مصرف CPU یا حافظه این فرآیندها بدون دلیل مشخص بالاست؟
-6.  [ ] **بررسی ماژول‌های کرنل:** با Process Explorer، درایورهای بارگذاری‌شده را بررسی کرده و به دنبال موارد ناشناس یا بدون امضای دیجیتال معتبر بگردید.
-7.  [ ] **بررسی لاگ‌های Sysmon:** رخدادهای ایجاد فرآیند (Event ID 1) و دسترسی به فرآیند (Event ID 10) را برای شناسایی فعالیت‌های مشکوک تحلیل کنید.
+فرزند System: آیا تنها فرزند دائمی System، فرآیند smss.exe است؟
 
----
+مشخصات smss.exe: آیا smss.exe از مسیر C:\Windows\System32 اجرا شده و والد آن PID 4 است؟
 
-<h2 dir="rtl">۴. عمق فنی بیشتر و روش‌های شناسایی Rootkit</h2>
+تعداد smss.exe: آیا فقط یک نمونه پایدار از smss.exe در حال اجراست؟
 
-<h3 dir="rtl">معماری داخلی کرنل</h3>
+والد Memory Compression: آیا والد فرآیند Memory Compression، فرآیند System است؟
 
-<ul dir="rtl">
-  <li><b>EPROCESS:</b> ساختاری در کرنل که تمام اطلاعات یک فرآیند (PID، والد، توکن دسترسی و...) را نگهداری می‌کند. کرنل لیست دوطرفه‌ای (Doubly-Linked List) از تمام ساختارهای <code>EPROCESS</code> را در متغیر <code>PsActiveProcessHead</code> ذخیره می‌کند.</li>
-  <li><b>PsLoadedModuleList:</b> لیستی در کرنل که اطلاعات تمام درایورها و ماژول‌های بارگذاری‌شده در فضای هسته را شامل می‌شود.</li>
-</ul>
+اتصالات شبکه: با netstat -ano یا TCPView بررسی کنید که آیا smss.exe یا Memory Compression فعالیت شبکه‌ای دارند.
 
-<h3 dir="rtl">تکنیک‌های شناسایی Rootkit</h3>
+ماژول‌های کرنل: با Process Explorer، درایورهای بارگذاری‌شده در فضای System را بررسی و موارد بدون امضای دیجیتال را شناسایی کنید.
 
-<p dir="rtl">Rootkitها بدافزارهایی هستند که در سطح کرنل عمل کرده و با دستکاری ساختارهای داخلی سیستم‌عامل، خود را پنهان می‌کنند.</p>
+لاگ‌های Sysmon: رخدادهای ایجاد فرآیند (Event ID 1) را برای شناسایی ناهنجاری‌ها در این فرآیندها تحلیل کنید.
 
-<ul dir="rtl">
-  <li><b>DKOM (Direct Kernel Object Manipulation):</b> بدافزار مستقیماً ساختار <code>EPROCESS</code> را دستکاری می‌کند و با حذف گره مربوط به فرآیند خود از لیست <code>PsActiveProcessHead</code>، آن را از دید ابزارهای مانیتورینگ پنهان می‌کند.</li>
-  <li><b>SSDT Hooking (System Service Descriptor Table):</b> بدافزار جدول فراخوانی‌های سیستمی (SSDT) را دستکاری کرده و آدرس توابع سیستمی را با آدرس کد مخرب خود جایگزین می‌کند.</li>
-  <li><b>IRP Hooking (I/O Request Packet):</b> بدافزار توابع مدیریت درخواست‌های ورودی/خروجی (IRP) در درایورها را Hook می‌کند تا بتواند داده‌های مربوط به شبکه یا فایل سیستم را شنود یا دستکاری کند.</li>
-</ul>
----
+۵. عمق فنی بیشتر و روش‌های شناسایی Rootkit
 
-## ۵. بخش‌های تکمیلی و منابع
+Rootkitها بدافزارهایی هستند که با دستکاری ساختارهای داخلی کرنل، خود را پنهان می‌کنند.
 
-### نگاشت به چارچوب MITRE ATT&CK®
+DKOM (Direct Kernel Object Manipulation): بدافزار مستقیماً ساختار EPROCESS را دستکاری کرده و فرآیند مخرب خود را از لیست فرآیندهای فعال سیستم حذف می‌کند تا از دید ابزارها پنهان بماند.
 
-| شناسه | عنوان | توضیح فارسی |
-| :---: | :--- | :--- |
-| **T1068** | Exploitation for Privilege Escalation | بهره‌برداری از آسیب‌پذیری درایورها برای اجرای کد در سطح کرنل. |
-| **T1547.006** | Boot or Logon Autostart Execution: Kernel Modules and Drivers | بارگذاری یک درایور مخرب (Rootkit) برای تضمین پایداری. |
-| **T1055** | Process Injection | تزریق کد به فرآیندهای سیستمی در سطح کرنل. |
-| **T1014** | Rootkit | پنهان‌سازی فعالیت‌ها با دستکاری مستقیم ساختارهای کرنل. |
+SSDT Hooking (System Service Descriptor Table): بدافزار با تغییر جدول فراخوانی‌های سیستمی، کنترل اجرای توابع اصلی ویندوز را به دست می‌گیرد.
 
-### سناریوها و مطالعات موردی
+IRP Hooking (I/O Request Packet): بدافزار با هوک کردن توابع مدیریت ورودی/خروجی، داده‌های شبکه یا فایل سیستم را شنود یا دستکاری می‌کند.
 
-- **نفوذ از طریق درایور HTTP.sys:** مهاجمان با بهره‌برداری از آسیب‌پذیری در درایور `HTTP.sys` (که در بستر فرآیند System اجرا می‌شود)، یک وب‌شل (Web Shell) در سطح کرنل پیاده‌سازی کرده و به شنود ترافیک می‌پردازند.
-- **پنهان‌سازی Payload در Memory Compression:** تحلیل‌های امنیتی (مانند گزارش‌های Google TAG) نشان داده‌اند که بدافزارهای پیشرفته، Payload خود را به حافظه فشرده‌شده منتقل می‌کنند تا از اسکن ابزارهای تحلیل حافظه در امان بمانند.
+۶. بخش‌های تکمیلی و منابع
+نگاشت به چارچوب MITRE ATT&CK®
 
-### کوئری‌های Sysmon نمونه
+[T1036] - Masquerading: جعل نام فرآیندهای سیستمی مانند smss.exe به smsss.exe برای فریب تحلیلگران.
 
-برای شناسایی فعالیت‌های مشکوک، می‌توانید از کوئری‌های زیر در سیستم SIEM خود استفاده کنید.
+[T1068] - Exploitation for Privilege Escalation: بهره‌برداری از آسیب‌پذیری درایورها برای اجرای کد در سطح کرنل (فرآیند System).
 
-- **شناسایی فرزندی غیر از smss.exe برای System:**
+[T1547.006] - Boot or Logon Autostart Execution: Kernel Modules and Drivers: بارگذاری یک درایور مخرب (Rootkit) برای تضمین پایداری.
+
+[T1014] - Rootkit: پنهان‌سازی فعالیت‌ها با دستکاری مستقیم ساختارهای کرنل.
+
+کوئری‌های Sysmon نمونه
+
+برای شناسایی فعالیت‌های مشکوک، می‌توانید از قوانین زیر در پیکربندی Sysmon استفاده کنید.
 
 <div dir="ltr">
 
-```xml
-<Sysmon schemaversion="4.30">
+code
+Xml
+download
+content_copy
+expand_less
+<Sysmon schemaversion="4.81">
   <EventFiltering>
-    <RuleGroup name="" groupRelation="or">
+    <RuleGroup name="Suspicious System/SMSS Activity" groupRelation="or">
+
+      <!-- Rule: Detect smss.exe running from an abnormal path -->
+      <ProcessCreate onmatch="include">
+        <Image condition="is">smss.exe</Image>
+        <OriginalFileName condition="is">smss.exe</OriginalFileName>
+        <Image condition="not end with">\\Windows\\System32\\smss.exe</Image>
+      </ProcessCreate>
+
+      <!-- Rule: Detect smss.exe with a parent other than System -->
+      <ProcessCreate onmatch="include">
+        <Image condition="end with">\\smss.exe</Image>
+        <ParentImage condition="not is">System</ParentImage>
+      </ProcessCreate>
+
+      <!-- Rule: Detect a child process for System other than smss.exe or Memory Compression -->
       <ProcessCreate onmatch="include">
         <Rule groupRelation="and">
           <ParentImage condition="is">System</ParentImage>
-          <Image condition="not contains">smss.exe</Image>
+          <Image condition="not end with">\\smss.exe</Image>
+          <Image condition="not is">Memory Compression</Image>
         </Rule>
       </ProcessCreate>
+      
+      <!-- Rule: Detect network connection from smss.exe -->
+      <NetworkConnect onmatch="include">
+          <Image condition="end with">\\smss.exe</Image>
+      </NetworkConnect>
+
     </RuleGroup>
   </EventFiltering>
 </Sysmon>
-```
-
 </div>
 
-### منابع بیشتر برای مطالعه
+منابع بیشتر برای مطالعه
 
-- **Microsoft Docs:** [مستندات رسمی Sysinternals Suite](https://docs.microsoft.com/en-us/sysinternals/)
-- **کتاب:** *Windows Internals, Part 1 & 2*
-- **وب‌سایت:** [The Volatility Foundation](https://www.volatilityfoundation.org/)
+Microsoft Docs: مستندات رسمی Sysinternals Suite
+
+کتاب: Windows Internals, Part 1 & 2
+
+وب‌سایت: The Volatility Foundation
 
 </div>
