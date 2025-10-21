@@ -222,10 +222,10 @@ Volatility یک فریم‌ورک متن‌باز برای تحلیل حافظه
 
 ### نگاشت به چارچوب MITRE ATT&CK®
 
-- **[T1068] - Exploitation for Privilege Escalation:** بهره‌برداری از آسیب‌پذیری درایورها برای اجرای کد در سطح کرنل.
-- **[T1547.006] - Boot or Logon Autostart Execution: Kernel Modules and Drivers:** بارگذاری یک درایور مخرب (Rootkit) برای تضمین پایداری.
-- **[T1055] - Process Injection:** تزریق کد به فرآیندهای سیستمی در سطح کرنل.
-- **[T1014] - Rootkit:** پنهان‌سازی فعالیت‌ها با دستکاری مستقیم ساختارهای کرنل.
+- **[T1068] - Exploitation for Privilege Escalation:** بهره‌برداری از آسیب‌پذیری درایورها برای اجرای کد در سطح کرنل.  
+- **[T1547.006] - Boot or Logon Autostart Execution: Kernel Modules and Drivers:** بارگذاری یک درایور مخرب (Rootkit) برای تضمین پایداری.  
+- **[T1055] - Process Injection:** تزریق کد به فرآیندهای سیستمی در سطح کرنل.  
+- **[T1014] - Rootkit:** پنهان‌سازی فعالیت‌ها با دستکاری مستقیم ساختارهای کرنل.  
 
 ### سناریوها و مطالعات موردی
 
