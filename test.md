@@ -85,13 +85,15 @@
 
 ## ۴. بخش‌های کاربردی و عملیاتی
 
-### راهنمای عملی تحلیل
+<h3 dir="rtl">راهنمای عملی تحلیل</h3>
 
-#### ابزارهای مجموعه Sysinternals Suite
+<h4 dir="rtl">ابزارهای مجموعه Sysinternals Suite</h4>
 
-- **Process Explorer:** برای مشاهده دقیق سلسله‌مراتب فرآیندها (`System` -> `smss.exe` & `Memory Compression`).
-- **Process Monitor:** برای رصد زنده فعالیت‌های فایل سیستم و رجیستری.
-- **Sysmon:** برای ثبت رویدادهای سیستمی و شناسایی ناهنجاری‌ها بر اساس قوانین از پیش تعیین‌شده.
+<ul dir="rtl">
+  <li><b>Process Explorer:</b> برای مشاهده دقیق سلسله‌مراتب فرآیندها (<code>System</code> → <code>smss.exe</code> & <code>Memory Compression</code>).</li>
+  <li><b>Process Monitor:</b> برای رصد زنده فعالیت‌های فایل سیستم و رجیستری.</li>
+  <li><b>Sysmon:</b> برای ثبت رویدادهای سیستمی و شناسایی ناهنجاری‌ها بر اساس قوانین از پیش تعیین‌شده.</li>
+</ul>
 
 #### دستورات PowerShell
 
