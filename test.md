@@ -1,228 +1,160 @@
+<div dir="rtl" align="right">
+
+عذرخواهی می‌کنم، حق با شماست. در پاسخ قبلی مطالب را به اشتباه ترکیب کردم.
+
+در ادامه، متن کامل و بهبودیافته **منحصراً برای فرآیند `smss.exe`** در فرمت Markdown آماده شده است. این نسخه برای استفاده در GitHub کاملاً مناسب بوده و تمام جزئیات فنی و کاربردی درخواست‌شده را در بر می‌گیرد.
+
+</div>
+
+---
+
 <div dir="rtl">
 
-# تحلیل جامع فرآیندهای سیستمی ویندوز: System, smss.exe و Memory Compression
+# تحلیل جامع فرآیند smss.exe: دروازه‌بان نشست‌های ویندوز
 
 ## مقدمه
 
-در معماری سیستم‌عامل ویندوز، فرآیندهای خاصی وجود دارند که درک آن‌ها برای مدیریت، بهینه‌سازی و امنیت سیستم حیاتی است. سه مورد از مهم‌ترین و در عین حال گاهی مبهم‌ترینِ این فرآیندها، «System»، «Session Manager Subsystem» یا `smss.exe` و «Memory Compression» هستند. این راهنما به تحلیل عمیق این سه فرآیند، رفتارهای عادی و مشکوک آن‌ها و روش‌های عملی برای بررسی آن‌ها می‌پردازد.
+فرآیند **Session Manager Subsystem** (با نام فایل **smss.exe**) یکی از حیاتی‌ترین مؤلفه‌های سیستم‌عامل ویندوز است. این فرآیند به عنوان *اولین فرآیند حالت کاربر (User Mode)* پس از راه‌اندازی هسته (Kernel) توسط فرآیند **System (PID 4)** ایجاد می‌شود و نقشی کلیدی در راه‌اندازی سیستم و آماده‌سازی محیط برای نشست‌های (Sessions) کاربری ایفا می‌کند.
+
+این راهنما به تحلیل عمیق این فرآیند، رفتارهای عادی و مشکوک آن، و روش‌های عملی برای بررسی آن از دیدگاه امنیتی می‌پردازد.
 
 ---
 
-<h2 dir="rtl">۱. فرآیند System (PID 4): قلب تپنده کرنل</h2>
+## ۱. عملکرد و وظایف اصلی
 
-<p dir="rtl">
-فرآیند <b>System</b> با شناسه فرآیند (PID) ثابت <b>4</b>، یکی از اصلی‌ترین و بنیادی‌ترین موجودیت‌ها در هسته (Kernel) ویندوز است. این فرآیند، یک فرآیند واقعی در فضای کاربر (User Space) نیست؛ بلکه در ابزارهایی مانند Task Manager، بازتابی از تمام فعالیت‌ها و تِرِدهای در حال اجرا در حالت هسته (Kernel Mode Threads) است.
+مسیر اجرایی `smss.exe` همواره در `C:\Windows\System32\smss.exe` قرار دارد و تحت حساب کاربری `NT AUTHORITY\SYSTEM` اجرا می‌شود.
+
+این فرآیند مسئولیت‌های بنیادین متعددی را در مراحل اولیه بوت بر عهده دارد:
+
+-   **ایجاد متغیرهای محیطی (Environment Variables):** متغیرهای سیستمی را با خواندن مقادیر از کلید رجیستری `HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment` تنظیم می‌کند.
+-   **مقداردهی اولیه رجیستری:** هایوهای (Hives) حیاتی رجیستری مانند `HKLM\SAM`، `HKLM\SECURITY` و `HKLM\SOFTWARE` را بارگذاری و آماده می‌کند.
+-   **مدیریت فایل صفحه‌بندی (Page File):** فایل `Pagefile.sys` را برای مدیریت حافظه مجازی ایجاد و مقداردهی می‌کند.
+-   **بارگذاری زیرسیستم Win32:** زیرسیستم `Win32k.sys` (در حالت هسته) و فرآیند `csrss.exe` (در حالت کاربر) را راه‌اندازی می‌کند تا محیط گرافیکی و APIهای ویندوز فراهم شوند.
+-   **اجرای وظایف پیش‌راه‌اندازی:** دستورات موجود در مقدار `BootExecute` در رجیستری (مانند `autochk.exe` برای بررسی سلامت دیسک) را قبل از بوت کامل اجرا می‌کند. این بخش یکی از نقاط مورد علاقه بدافزارها برای دستیابی به پایداری (Persistence) است.
+
+<p align="center">
+  <img src="https://i.imgur.com/T0bS18K.png" alt="smss.exe Process Hierarchy" width="700"/>
+  <br>
+  <small>نمودار سلسله‌مراتبی ایجاد فرآیندها توسط smss.exe</small>
 </p>
 
-<p dir="rtl">
-این فرآیند در واقع نمایانگر عملکرد خودِ هسته ویندوز (فایل <code>ntoskrnl.exe</code>) بوده و مسئولیت اجرای روتین‌های وقفه (Interrupt Routines) و روندهای زمان‌بندی (Scheduling) را بر عهده دارد.
-</p>
+## ۲. ساختار نمونه‌ها: معماری "Master" و "Child"
 
-<h3 dir="rtl">ویژگی‌های کلیدی</h3>
-<ul dir="rtl">
-  <li><b>PID:</b> همیشه و به صورت ثابت <code>4</code> است.</li>
-  <li><b>مالک (Owner):</b> تحت حساب کاربری <code>NT AUTHORITY\SYSTEM</code> اجرا می‌شود.</li>
-  <li><b>والد (Parent):</b> هیچ (این فرآیند ریشه است و توسط هسته در زمان بوت ایجاد می‌شود).</li>
-  <li><b>فرزند (Child):</b> در یک سیستم سالم، فرآیند System تنها و فقط یک فرآیند فرزند به نام <code>smss.exe</code> دارد.</li>
-  <li><b>مسیر اجرایی:</b> فاقد مسیر اجرایی در فضای کاربر است. در Process Explorer به عنوان "None" نمایش داده می‌شود.</li>
-</ul>
-
-<h3 dir="rtl">وظایف اصلی</h3>
-<ul dir="rtl">
-  <li><b>مدیریت حافظه (Memory Manager Threads):</b> برای تخصیص حافظه در Kernel Pool.</li>
-  <li><b>عملیات ورودی/خروجی (I/O Workers):</b> برای کنترل دیسک و شبکه.</li>
-  <li><b>توزیع بار پردازشی (Balancer Threads):</b> برای متعادل‌سازی بار کاری بین هسته‌های CPU.</li>
-  <li><b>ارتباطات بین پردازشی (IPC):</b> مدیریت System Calls، DPCs و Interrupts.</li>
-</ul>
-
----
-
-## ۲. فرآیند smss.exe: دروازه‌بان نشست‌های کاربری
-
-فرآیند **Session Manager Subsystem** (با نام فایل **smss.exe**) یکی از حیاتی‌ترین مؤلفه‌های سیستم‌عامل ویندوز و در واقع *اولین فرآیند حالت کاربر (User Mode)* است که پس از راه‌اندازی هسته توسط فرآیند **System (PID 4)** ایجاد می‌شود.
-
-مسیر اجرایی این فرآیند همواره در `C:\Windows\System32\smss.exe` قرار دارد و تحت حساب کاربری `NT AUTHORITY\SYSTEM` اجرا می‌شود.
-
-
-### وظایف اصلی و حیاتی
-
-- **ایجاد متغیرهای محیطی (Environment Variables):** متغیرهای سیستمی را از رجیستری می‌خواند و تنظیم می‌کند.
-- **مقداردهی اولیه رجیستری:** هایوهای (Hives) حیاتی مانند `HKLM\SAM`، `HKLM\SECURITY` و `HKLM\SOFTWARE` را مقداردهی اولیه می‌کند.
-- **مدیریت فایل صفحه‌بندی (Page File):** فایل `Pagefile.sys` را برای مدیریت حافظه مجازی ایجاد می‌کند.
-- **بارگذاری زیرسیستم Win32:** زیرسیستم `Win32k.sys` (در حالت هسته) و `csrss.exe` (در حالت کاربر) را راه‌اندازی می‌کند.
-- **ایجاد نشست‌ها (Sessions):** مهم‌ترین وظیفه آن، ایجاد نشست‌های کاربری جدید است.
-
-### ساختار نمونه‌ها: معماری Master و Child
-
-نحوه عملکرد `smss.exe` اغلب باعث سردرگمی می‌شود، اما ساختار مشخصی دارد:
+نحوه عملکرد `smss.exe` اغلب باعث سردرگمی می‌شود، اما ساختار کاملاً مشخصی دارد:
 
 1.  **نمونه اصلی (Master Instance):** یک نمونه اصلی و دائمی از `smss.exe` وجود دارد که پس از بوت در حافظه باقی می‌ماند. مشخصه اصلی این نمونه، *عدم وجود هرگونه آرگومان خط فرمان (Command Line Arguments)* است.
+
 2.  **نمونه‌های فرزند (Temporary Instances):** این نمونه اصلی، به ازای هر نشست جدید، یک کپی موقتی (فرزند) از خود ایجاد می‌کند.
-    - **Session 0 (نشست سیستمی):** اولین فرزند برای نشست صفر ایجاد شده و مسئول راه‌اندازی فرآیندهای `csrss.exe` و `wininit.exe` است.
-    - **Session 1 (نشست کاربر):** فرزند بعدی برای نشست اولین کاربر ایجاد شده و مسئول راه‌اندازی `csrss.exe` و `winlogon.exe` مربوط به آن نشست است.
-3.  **خاتمه فرزندان:** پس از اینکه این نمونه‌های موقت وظایف خود را انجام دادند، خاتمه می‌یابند. بنابراین، در یک سیستم در حال کار، تنها **یک** نمونه اصلی و پایدار از `smss.exe` باید فعال باشد.
+    -   **Session 0 (نشست سیستمی):** اولین فرزند برای نشست ایزوله صفر ایجاد شده و مسئول راه‌اندازی فرآیندهای سیستمی حیاتی یعنی **`wininit.exe`** و **`csrss.exe`** (مربوط به نشست صفر) است.
+    -   **Session 1 (نشست کاربر):** با لاگین اولین کاربر، فرزند بعدی برای نشست او (معمولاً Session 1) ایجاد شده و مسئول راه‌اندازی **`winlogon.exe`** (فرآیند لاگین کاربر) و **`csrss.exe`** مربوط به آن نشست است.
+
+3.  **خاتمه فرزندان:** پس از اینکه این نمونه‌های موقت وظایف خود را انجام دادند، بلافاصله خاتمه می‌یابند. بنابراین، در یک سیستم در حال کار، تنها **یک** نمونه اصلی و پایدار از `smss.exe` باید فعال باشد.
 
 ---
 
-## ۳. فرآیند Memory Compression: بهینه‌ساز حافظه مدرن
-
-فرآیند **Memory Compression** یکی از قابلیت‌های نسبتاً جدید است که از ویندوز ۱۰ (Build 10586) به بعد معرفی شد. این فرآیند با هدف بهبود عملکرد سیستم، به‌خصوص در زمان کمبود حافظه فیزیکی (RAM)، طراحی شده است.
-
-### عملکرد و هدف
-
-به جای انتقال مستقیم داده‌های غیرفعال از RAM به دیسک (Paging)، این فرآیند ابتدا سعی می‌کند بخش‌هایی از حافظه را درون خودِ RAM فشرده‌سازی کند. این کار فضای خالی ایجاد کرده و نیاز به مراجعه به دیسکِ کُند را کاهش می‌دهد.
-
-
-### ویژگی‌های کلیدی
-
-- **والد (Parent):** این فرآیند فرزند فرآیند `System` (PID 4) محسوب می‌شود.
-- **فرزند (Child):** هیچ فرآیند فرزندی ندارد.
-- **مالک (Owner):** تحت حساب کاربری `NT AUTHORITY\SYSTEM` اجرا می‌شود.
-- **تعداد:** همیشه تنها یک نمونه از آن در سیستم فعال است.
-- **عملکرد داخلی:** بخشی از مدیریت حافظه (Memory Manager) در کرنل است و از ساختاری به نام **Store Manager** برای نگهداری صفحات فشرده استفاده می‌کند.
-
----
-
-## ۴. بخش‌های کاربردی و عملیاتی
-
-<h3 dir="rtl">راهنمای عملی تحلیل</h3>
-
-<h4 dir="rtl">ابزارهای مجموعه Sysinternals Suite</h4>
-
-<ul dir="rtl">
-  <li><b>Process Explorer:</b> برای مشاهده دقیق سلسله‌مراتب فرآیندها (<code>System</code> → <code>smss.exe</code> & <code>Memory Compression</code>).</li>
-  <li><b>Process Monitor:</b> برای رصد زنده فعالیت‌های فایل سیستم و رجیستری.</li>
-  <li><b>Sysmon:</b> برای ثبت رویدادهای سیستمی و شناسایی ناهنجاری‌ها بر اساس قوانین از پیش تعیین‌شده.</li>
-</ul>
-
-#### دستورات PowerShell
-
-- **نمایش اطلاعات فرآیندها:**
-
-<div dir="ltr">
-
-```powershell
-# Get information about the System process
-Get-Process -Id 4 | Format-List *
-
-# Get information about the smss.exe process (should be only one)
-Get-Process -Name "smss"
-
-# Get information about the Memory Compression process
-Get-Process -Name "Memory Compression"
-```
-
-</div>
-
-- **بررسی و مدیریت وضعیت Memory Compression:**
-
-<div dir="ltr">
-
-```powershell
-# Check if Memory Compression is enabled
-Get-MMAgent
-
-# Disable Memory Compression (requires Admin rights)
-Disable-MMAgent -mc
-```
-
-</div>
-
-#### ابزار Volatility برای تحلیل حافظه
-
-با استفاده از Volatility و یک dump از حافظه RAM، می‌توان فرآیندهای مخفی (که توسط Rootkit از دید ابزارهای زنده پنهان شده‌اند) یا کدهای تزریق‌شده به فرآیندهای سیستمی را شناسایی کرد.
+## ۳. تحلیل امنیتی و راهنمای عملی
 
 ### جدول مقایسه‌ای: رفتار عادی در مقابل مشکوک
 
-| فرآیند / ویژگی | رفتار عادی (Normal) | رفتار مشکوک (Suspicious / IoC) |
+| ویژگی | رفتار عادی (Normal) | رفتار مشکوک (Suspicious / IoC) |
 | :--- | :--- | :--- |
-| **System (PID 4)** | | |
-| تعداد و PID | دقیقاً یک نمونه با `PID 4`. | بیش از یک نمونه یا PID متفاوت. |
-| والد | ندارد (ریشه). | داشتن یک فرآیند والد. |
-| فرزند | فقط `smss.exe`. | هر فرزندی غیر از `smss.exe`. |
-| فعالیت شبکه | محدود به درایورهای کرنل (مثل `HTTP.sys`). | شنود روی پورت‌های رایج (80, 443) یا ایجاد اتصالات خروجی. |
-| **smss.exe** | | |
-| مسیر اجرایی | همیشه در `C:\Windows\System32`. | وجود فایل در مسیر دیگر یا با نام مشابه (`smsss.exe`). |
-| والد | همیشه `System (PID 4)`. | هر والد دیگری (`explorer.exe`, `services.exe`, ...). |
-| تعداد نمونه‌ها | یک نمونه پایدار (بدون آرگومان خط فرمان). | بیش از یک نمونه پایدار. |
-| فعالیت شبکه | ندارد. | هرگونه فعالیت شبکه‌ای یک پرچم قرمز جدی است. |
-| **Memory Compression** | | |
-| والد | `System (PID 4)`. | هر والدی غیر از فرآیند `System`. |
-| فرزند | ندارد. | داشتن هرگونه فرآیند فرزند. |
-| فعالیت شبکه/دیسک | ندارد. | مشاهده اتصالات شبکه یا خواندن/نوشتن مستقیم روی دیسک. |
+| **مسیر اجرایی** | همیشه در `C:\Windows\System32\` | وجود در مسیرهای دیگر مانند `Temp`, `Downloads` یا حتی `System32` با نام مشابه. |
+| **نام فایل** | `smss.exe` | جعل نام (Masquerading) مانند `smsss.exe`, `sms.exe` یا `smss32.exe`. |
+| **فرآیند والد** | همیشه **System (PID 4)** | هر والد دیگری مانند `explorer.exe`, `svchost.exe` یا `powershell.exe`. |
+| **تعداد نمونه‌ها** | یک نمونه پایدار (بدون آرگومان خط فرمان). | وجود **بیش از یک** نمونه پایدار. |
+| **آرگومان خط فرمان** | نمونه اصلی فاقد آرگومان است. | وجود آرگومان‌های مشکوک در نمونه اصلی. |
+| **فعالیت شبکه** | به هیچ‌وجه نباید فعالیت شبکه‌ای داشته باشد. | هرگونه اتصال ورودی یا خروجی یک **پرچم قرمز جدی** است. |
+| **امضای دیجیتال** | دارای امضای معتبر "Microsoft Windows Publisher". | فاقد امضا یا با امضای نامعتبر. |
+| **حساب کاربری** | `NT AUTHORITY\SYSTEM` | اجرا تحت حساب کاربری دیگر. |
+
+### دستورات کاربردی PowerShell
+
+برای بررسی سریع و خودکار ویژگی‌های `smss.exe` می‌توان از دستورات زیر استفاده کرد.
+
+<div dir="ltr">
+
+```powershell
+# Get the smss.exe process object
+$smss = Get-Process -Name smss -ErrorAction SilentlyContinue
+
+if ($smss) {
+    # Check for multiple instances
+    if ($smss.Count -gt 1) {
+        Write-Warning "More than one smss.exe instance found!"
+    }
+
+    # Verify path and parent process
+    foreach ($instance in $smss) {
+        $parent = (Get-CimInstance -ClassName Win32_Process -Filter "ProcessId = $($instance.Id)").ParentProcessId
+        Write-Host "Instance PID: $($instance.Id)"
+        Write-Host "  Path: $($instance.Path)"
+        Write-Host "  Parent PID: $parent"
+
+        # Validate Path
+        if ($instance.Path -ne "C:\Windows\System32\smss.exe") {
+            Write-Error "Suspicious Path: $($instance.Path)"
+        }
+        # Validate Parent
+        if ($parent -ne 4) {
+            $parentProcess = Get-Process -Id $parent -ErrorAction SilentlyContinue
+            Write-Error "Incorrect Parent Process: $($parentProcess.Name)"
+        }
+    }
+} else {
+    Write-Host "smss.exe is not running."
+}
+```
+
+</div>
 
 ### چک‌لیست امنیتی برای تحلیلگران
 
-1.  [ ] **PID 4:** آیا فقط یک فرآیند `System` با `PID 4` وجود دارد و والد آن خالی است؟
-2.  [ ] **فرزند System:** آیا تنها فرزند دائمی `System`، فرآیند `smss.exe` است؟
-3.  [ ] **مشخصات smss.exe:** آیا `smss.exe` از مسیر `C:\Windows\System32` اجرا شده و والد آن `PID 4` است؟
-4.  [ ] **تعداد smss.exe:** آیا فقط یک نمونه پایدار از `smss.exe` در حال اجراست؟
-5.  [ ] **والد Memory Compression:** آیا والد فرآیند `Memory Compression`، فرآیند `System` است؟
-6.  [ ] **اتصالات شبکه:** با `netstat -ano` یا TCPView بررسی کنید که آیا `smss.exe` یا `Memory Compression` فعالیت شبکه‌ای دارند.
-7.  [ ] **ماژول‌های کرنل:** با Process Explorer، درایورهای بارگذاری‌شده در فضای `System` را بررسی و موارد بدون امضای دیجیتال را شناسایی کنید.
-8.  [ ] **لاگ‌های Sysmon:** رخدادهای ایجاد فرآیند (Event ID 1) را برای شناسایی ناهنجاری‌ها در این فرآیندها تحلیل کنید.
+1.  [ ] **تایید مسیر:** آیا مسیر فایل `C:\Windows\System32\smss.exe` است؟
+2.  [ ] **تایید والد:** آیا فرآیند والد آن `System (PID 4)` است؟ (با استفاده از Process Explorer یا دستور بالا)
+3.  [ ] **تایید تعداد:** آیا فقط یک نمونه پایدار از آن در حال اجرا است؟
+4.  [ ] **بررسی نام:** آیا نام فایل دقیقاً `smss.exe` است و نه یک نام مشابه؟
+5.  [ ] **بررسی شبکه:** با ابزاری مانند TCPView یا `netstat -ano`، اطمینان حاصل کنید که این فرآیند هیچ‌گونه اتصال شبکه‌ای ندارد.
+6.  [ ] **بررسی امضای دیجیتال:** در تب Properties فایل، امضای دیجیتال آن را بررسی کنید.
+7.  [ ] **بررسی رجیستری برای پایداری:** مقدار کلید `HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\BootExecute` را بررسی کنید. به صورت پیش‌فرض، این مقدار باید فقط شامل `autocheck autochk *` باشد. وجود ورودی‌های دیگر می‌تواند نشانه‌ی بدافزار باشد.
 
 ---
 
-## ۵. عمق فنی بیشتر و روش‌های شناسایی Rootkit
-
-<p dir="rtl">Rootkitها بدافزارهایی هستند که با دستکاری ساختارهای داخلی کرنل، خود را پنهان می‌کنند.</p>
-
-<ul dir="rtl">
-  <li><b>DKOM (Direct Kernel Object Manipulation):</b> بدافزار مستقیماً ساختار <code>EPROCESS</code> را دستکاری کرده و فرآیند مخرب خود را از لیست فرآیندهای فعال سیستم حذف می‌کند تا از دید ابزارها پنهان بماند.</li>
-  <li><b>SSDT Hooking (System Service Descriptor Table):</b> بدافزار با تغییر جدول فراخوانی‌های سیستمی، کنترل اجرای توابع اصلی ویندوز را به دست می‌گیرد.</li>
-  <li><b>IRP Hooking (I/O Request Packet):</b> بدافزار با هوک کردن توابع مدیریت ورودی/خروجی، داده‌های شبکه یا فایل سیستم را شنود یا دستکاری می‌کند.</li>
-</ul>
-
----
-
-## ۶. بخش‌های تکمیلی و منابع
+## ۴. بخش‌های تکمیلی
 
 ### نگاشت به چارچوب MITRE ATT&CK®
 
-| شناسه | عنوان | توضیح فارسی |
-| :---: | :--- | :--- |
-| **T1036** | Masquerading | جعل نام فرآیندهای سیستمی مانند `smss.exe` به `smsss.exe` برای فریب تحلیلگران. |
-| **T1068** | Exploitation for Privilege Escalation | بهره‌برداری از آسیب‌پذیری درایورها برای اجرای کد در سطح کرنل (فرآیند `System`). |
-| **T1547.006** | Boot or Logon Autostart Execution: Kernel Modules and Drivers | بارگذاری یک درایور مخرب (Rootkit) برای تضمین پایداری. |
-| **T1014** | Rootkit | پنهان‌سازی فعالیت‌ها با دستکاری مستقیم ساختارهای کرنل. |
+-   **[T1036.005] - Masquerading: Match Legitimate Name or Location:** مهاجمان با ایجاد بدافزارهایی با نام `smss.exe` در مسیرهای غیر استاندارد یا با نام‌های مشابه مانند `smsss.exe` سعی در فریب تحلیلگران دارند.
+-   **[T1547.001] - Boot or Logon Autostart Execution: Registry Run Keys / Startup Folder:** اگرچه `smss.exe` به طور مستقیم از Run Keys استفاده نمی‌کند، اما مهاجمان می‌توانند مقدار رجیستری `BootExecute` را که توسط `smss.exe` پردازش می‌شود، برای اجرای اسکریپت یا بدافزار خود در مراحل اولیه بوت دستکاری کنند.
+-   **[T1204.002] - User Execution: Malicious File:** کاربری ممکن است فریب خورده و یک فایل مخرب که خود را `smss.exe` جا زده است را از یک مسیر نامعتبر (مثلاً پوشه دانلود) اجرا کند.
 
 ### کوئری‌های Sysmon نمونه
 
-برای شناسایی فعالیت‌های مشکوک، می‌توانید از قوانین زیر در پیکربندی Sysmon استفاده کنید.
+برای شناسایی فعالیت‌های مشکوک مرتبط با `smss.exe`، می‌توانید از قوانین زیر در پیکربندی Sysmon استفاده کنید.
 
 <div dir="ltr">
 
 ```xml
 <Sysmon schemaversion="4.81">
   <EventFiltering>
-    <RuleGroup name="Suspicious System/SMSS Activity" groupRelation="or">
+    <RuleGroup name="Suspicious SMSS.exe Activity" groupRelation="or">
 
-      <!-- Rule: Detect smss.exe running from an abnormal path -->
+      <!-- Rule 1: Detect smss.exe running from an abnormal path -->
       <ProcessCreate onmatch="include">
         <Image condition="is">smss.exe</Image>
         <OriginalFileName condition="is">smss.exe</OriginalFileName>
-        <Image condition="not end with">\\Windows\\System32\\smss.exe</Image>
+        <!-- Standard path on 64-bit systems. Adapt for 32-bit if needed. -->
+        <Image condition="not image">C:\Windows\System32\smss.exe</Image>
       </ProcessCreate>
 
-      <!-- Rule: Detect smss.exe with a parent other than System -->
+      <!-- Rule 2: Detect smss.exe with a parent other than System -->
       <ProcessCreate onmatch="include">
-        <Image condition="end with">\\smss.exe</Image>
+        <Image condition="end with">\smss.exe</Image>
         <ParentImage condition="not is">System</ParentImage>
       </ProcessCreate>
-
-      <!-- Rule: Detect a child process for System other than smss.exe or Memory Compression -->
-      <ProcessCreate onmatch="include">
-        <Rule groupRelation="and">
-          <ParentImage condition="is">System</ParentImage>
-          <Image condition="not end with">\\smss.exe</Image>
-          <Image condition="not is">Memory Compression</Image>
-        </Rule>
-      </ProcessCreate>
       
-      <!-- Rule: Detect network connection from smss.exe -->
+      <!-- Rule 3: Detect network connection initiated by smss.exe -->
       <NetworkConnect onmatch="include">
-          <Image condition="end with">\\smss.exe</Image>
+          <Image condition="end with">\smss.exe</Image>
       </NetworkConnect>
 
     </RuleGroup>
@@ -234,8 +166,8 @@ Disable-MMAgent -mc
 
 ### منابع بیشتر برای مطالعه
 
-- **Microsoft Docs:** [مستندات رسمی Sysinternals Suite](https://docs.microsoft.com/en-us/sysinternals/)
-- **کتاب:** *Windows Internals, Part 1 & 2*
-- **وب‌سایت:** [The Volatility Foundation](https://www.volatilityfoundation.org/)
+-   **مستندات مایکروسافت:** [Windows Internals, Part 1, 7th Edition](https://docs.microsoft.com/en-us/sysinternals/resources/windows-internals)
+-   **وبلاگ Sysinternals:** [The Case of the Hung Sysinternals Utilities](https://techcommunity.microsoft.com/t5/windows-blog-archive/the-case-of-the-hung-sysinternals-utilities/ba-p/723559) (توضیح نقش `smss.exe` در ایجاد نشست‌ها)
+-   **چارچوب MITRE ATT&CK®:** [mitre.org](https://attack.mitre.org/)
 
 </div>
