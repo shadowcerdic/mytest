@@ -11,11 +11,11 @@
 
 <h4>ویژگی‌های کلیدی فرآیند System</h4>
 <ul>
-    <li><b>PID:</b> همیشه و به صورت ثابت 4 است.</li>
-    <li><b>مالک:</b> تحت حساب کاربری Local System اجرا می‌شود.</li>
-    <li><b>والد (Parent):</b> هیچ (خود هسته سیستم‌عامل است).</li>
-    <li><b>فرزند (Child):</b> در یک سیستم سالم، فرآیند System تنها و فقط یک فرآیند فرزند به نام <code>smss.exe</code> (Session Manager Subsystem) دارد.</li>
-    <li><b>مسیر اجرایی:</b> نمایش مسیر این فرآیند در ابزارهای مختلف متفاوت است؛ در Task Manager معمولاً <code>ntoskrnl.exe</code> و در Process Explorer به عنوان "None" نمایش داده می‌شود.</li>
+    <li><b>PID:</b> همیشه و به صورت ثابت 4 است </li>
+    <li><b>مالک:</b> تحت حساب کاربری Local System اجرا می‌شود </li>
+    <li><b>والد (Parent):</b> هیچ (خود هسته سیستم‌عامل است) </li>
+    <li><b>فرزند (Child):</b> در یک سیستم سالم، فرآیند System تنها و فقط یک فرآیند فرزند به نام <code>smss.exe</code> (Session Manager Subsystem) دارد </li>
+    <li><b>مسیر اجرایی:</b> نمایش مسیر این فرآیند در ابزارهای مختلف متفاوت است؛ در Task Manager معمولاً <code>ntoskrnl.exe</code> و در Process Explorer به عنوان "None" نمایش داده می‌شود </li>
 </ul>
 
 <h4>وظایف اصلی</h4>
