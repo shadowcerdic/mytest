@@ -43,9 +43,6 @@
 
 مسیر اجرایی این فرآیند همواره در `C:\Windows\System32\smss.exe` قرار دارد و تحت حساب کاربری `NT AUTHORITY\SYSTEM` اجرا می‌شود.
 
-<p align="center">
-  <img src="https://i.imgur.com/G5g2LdN.png" alt="Process Hierarchy" width="500"/>
-</p>
 
 ### وظایف اصلی و حیاتی
 
