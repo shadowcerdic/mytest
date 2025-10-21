@@ -10,7 +10,7 @@
 <p>این فرآیند در واقع نمایانگر عملکرد خودِ هسته ویندوز (فایل <code>ntoskrnl.exe</code>) بوده و مسئولیت اجرای روتین‌های وقفه (Interrupt Routines) و روندهای زمان‌بندی (Scheduling) را بر عهده دارد.</p>
 
 <h4>ویژگی‌های کلیدی فرآیند System</h4>
-<ul>
+<ul style="direction: rtl; text-align: right; list-style-position: inside;">
     <li><b>PID:</b> همیشه و به صورت ثابت 4 است </li>
     <li><b>مالک:</b> تحت حساب کاربری Local System اجرا می‌شود </li>
     <li><b>والد (Parent):</b> هیچ (خود هسته سیستم‌عامل است) </li>
