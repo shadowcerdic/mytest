@@ -9,14 +9,29 @@
 <p>فرآیند <b>System</b> با شناسه فرآیند (PID) ثابت 4، یکی از اصلی‌ترین و بنیادی‌ترین موجودیت‌ها در هسته (Kernel) ویندوز است. این فرآیند، یک فرآیند واقعی در فضای کاربر (User Space) مانند سایر برنامه‌ها نیست؛ بلکه در ابزارهایی مانند Task Manager، بازتابی از تمام فعالیت‌ها و تِرِدهای در حال اجرا در حالت هسته (Kernel Mode Threads) است.</p>
 <p>این فرآیند در واقع نمایانگر عملکرد خودِ هسته ویندوز (فایل <code>ntoskrnl.exe</code>) بوده و مسئولیت اجرای روتین‌های وقفه (Interrupt Routines) و روندهای زمان‌بندی (Scheduling) را بر عهده دارد.</p>
 
-<h4>ویژگی‌های کلیدی فرآیند System</h4>
-<ul style="direction: rtl; text-align: right; list-style-position: inside;">
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    ul {
+      direction: rtl;              /* متن و بولت‌ها راست‌به‌چپ */
+      text-align: right;           /* متن راست‌چین */
+      list-style-position: inside; /* بولت داخل متن */
+    }
+  </style>
+</head>
+<body>
+  <h4>ویژگی‌های کلیدی فرآیند System</h4>
+  <ul>
     <li><b>PID:</b> همیشه و به صورت ثابت 4 است </li>
     <li><b>مالک:</b> تحت حساب کاربری Local System اجرا می‌شود </li>
     <li><b>والد (Parent):</b> هیچ (خود هسته سیستم‌عامل است) </li>
     <li><b>فرزند (Child):</b> در یک سیستم سالم، فرآیند System تنها و فقط یک فرآیند فرزند به نام <code>smss.exe</code> (Session Manager Subsystem) دارد </li>
     <li><b>مسیر اجرایی:</b> نمایش مسیر این فرآیند در ابزارهای مختلف متفاوت است؛ در Task Manager معمولاً <code>ntoskrnl.exe</code> و در Process Explorer به عنوان "None" نمایش داده می‌شود </li>
-</ul>
+  </ul>
+</body>
+</html>
 
 <h4>وظایف اصلی</h4>
 <p>فرآیند System میزبان تمامی تردهای کرنلی است که وظایف حیاتی سیستم را مدیریت می‌کنند، از جمله:</p>
